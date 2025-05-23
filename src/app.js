@@ -26,8 +26,8 @@ function startGame() {
   canvas.height = window.innerHeight;
 
   const player = {
-    x: 0,
-    y: 0,
+    x: 100,
+    y: 120,
     health: 100,
     takingDamage: false,
   };
@@ -73,7 +73,11 @@ function startGame() {
     mouse.y = e.clientY;
   });
 
+  const buildings = [];
+
   function drawGrid() {
+    buildings.length = 0;
+
     // Draw grid lines
     ctx.strokeStyle = "#15ff00";
     ctx.lineWidth = 2;
@@ -152,39 +156,57 @@ function startGame() {
             buildingY =
               screenY + 25 + getSeededRandom(cellSeed, i * 4 + 3) * maxY;
           }
+
+          // Store building for collision detection
+          buildings.push({
+            x: buildingX + player.x - canvas.width / 2,
+            y: buildingY + player.y - canvas.height / 2,
+            width: buildingWidth,
+            height: buildingHeight,
+          });
+
           ctx.fillStyle = "#000000";
           ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
-
-          // Draw sentry
-          ctx.fillStyle = "#79171799";
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          const sentryAngle =
-            ((cellSeed % 8) * Math.PI) / 4 +
-            (cellSeed % 2 === 0 ? 1 : -1) * frameTime;
-          ctx.arc(
-            centerX,
-            centerY,
-            137.5,
-            sentryAngle,
-            sentryAngle + Math.PI / 3
-          );
-          ctx.lineTo(centerX, centerY);
-          ctx.fill();
-          ctx.strokeStyle = "#da3333";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-
-          checkSentry(
-            centerX,
-            centerY,
-            137.5,
-            sentryAngle,
-            sentryAngle + Math.PI / 3
-          );
         }
+
+        // Draw sentry
+        ctx.fillStyle = "#79171799";
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        const sentryAngle =
+          ((cellSeed % 8) * Math.PI) / 4 +
+          (cellSeed % 2 === 0 ? 1 : -1) * frameTime;
+        ctx.arc(
+          centerX,
+          centerY,
+          137.5,
+          sentryAngle,
+          sentryAngle + Math.PI / 3
+        );
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+        ctx.strokeStyle = "#da3333";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        checkSentry(
+          centerX,
+          centerY,
+          137.5,
+          sentryAngle,
+          sentryAngle + Math.PI / 3
+        );
       }
     }
+  }
+
+  function checkBoxIntersection(boxA, boxB) {
+    return (
+      boxA.x < boxB.x + boxB.width &&
+      boxA.x + boxA.width > boxB.x &&
+      boxA.y < boxB.y + boxB.height &&
+      boxA.y + boxA.height > boxB.y
+    );
   }
 
   function checkSentry(sentryX, sentryY, radius, startAngle, endAngle) {
@@ -265,8 +287,85 @@ function startGame() {
       dy /= Math.sqrt(2);
     }
 
-    player.x += dx * speed;
-    player.y += dy * speed;
+    const movement = handleCollisions(
+      player.x + dx * speed,
+      player.y + dy * speed
+    );
+
+    player.x += movement.x;
+    player.y += movement.y;
+  }
+
+  function handleCollisions(targetX, targetY) {
+    const moveX = targetX - player.x;
+    const moveY = targetY - player.y;
+
+    if (moveX === 0 && moveY === 0) {
+      return { x: 0, y: 0 };
+    }
+
+    // First check if we can move to the target position directly
+    const targetHitbox = {
+      x: targetX - 20,
+      y: targetY - 20,
+      width: 40,
+      height: 40,
+    };
+
+    // If no collision with any buildings, allow full movement
+    let collision = false;
+    for (const building of buildings) {
+      if (checkBoxIntersection(targetHitbox, building)) {
+        collision = true;
+        break;
+      }
+    }
+
+    if (!collision) {
+      return { x: moveX, y: moveY };
+    }
+
+    // Try X movement only
+    const xHitbox = {
+      x: targetX - 20,
+      y: player.y - 20,
+      width: 40,
+      height: 40,
+    };
+
+    let xCollision = false;
+    for (const building of buildings) {
+      if (checkBoxIntersection(xHitbox, building)) {
+        xCollision = true;
+        break;
+      }
+    }
+
+    // Try Y movement only
+    const yHitbox = {
+      x: player.x - 20,
+      y: targetY - 20,
+      width: 40,
+      height: 40,
+    };
+
+    let yCollision = false;
+    for (const building of buildings) {
+      if (checkBoxIntersection(yHitbox, building)) {
+        yCollision = true;
+        break;
+      }
+    }
+
+    // Allow sliding
+    if (!xCollision) {
+      return { x: moveX, y: 0 };
+    } else if (!yCollision) {
+      return { x: 0, y: moveY };
+    }
+
+    // No movement possible
+    return { x: 0, y: 0 };
   }
 
   function gameLoop() {
