@@ -33,6 +33,8 @@ function startGame() {
   };
 
   let frameTime = 0;
+  const timeSeed = Math.floor(Date.now().toString().slice(-7));
+
   const mouse = {
     x: 0,
     y: 0,
@@ -99,41 +101,88 @@ function startGame() {
         const centerX = screenX + 275 / 2;
         const centerY = screenY + 275 / 2;
 
+        const cellSeed =
+          ((Math.abs(cellX) * 13) % 10000) +
+          ((Math.abs(cellY) * 17) % 10000) +
+          (timeSeed % 10000); // Generate random seed for each cell
+
+        // Utility function to generate random numbers based on seed
+        const getSeededRandom = (seed, index) => {
+          const val = Math.sin(seed * 1000 + index * 100) * 10000;
+          return (val - Math.floor(val)) / 1; // Between 0 and 1
+        };
+
         // Draw grass
         ctx.fillStyle = "#006500";
         ctx.fillRect(screenX + 25, screenY + 25, 225, 225);
 
-        // Draw sentry
-        ctx.fillStyle = "#79171799";
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
+        // Draw buildings
+        for (let i = 0; i < 4; i++) {
+          const buildingWidth = 50 + getSeededRandom(cellSeed, i * 4) * 50;
+          const buildingHeight = 50 + getSeededRandom(cellSeed, i * 4 + 1) * 50;
+          const maxX = 225 - buildingWidth;
+          const maxY = 225 - buildingHeight;
+          let buildingX, buildingY;
 
-        const cellSeed = Math.abs(cellX * 13 + cellY * 17); // Random seed based on cell position
-        const sentryAngle =
-          ((cellSeed % 8) * Math.PI) / 4 +
-          (cellSeed % 2 === 0 ? 1 : -1) * frameTime; // Magic
+          if (i === 0) {
+            // Make sure first building is on the sentry
+            buildingX =
+              centerX -
+              buildingWidth / 2 +
+              getSeededRandom(cellSeed, 100) * 40 -
+              20;
+            buildingY =
+              centerY -
+              buildingHeight / 2 +
+              getSeededRandom(cellSeed, 101) * 40 -
+              20;
 
-        ctx.arc(
-          centerX,
-          centerY,
-          137.5,
-          sentryAngle,
-          sentryAngle + Math.PI / 3
-        );
-        ctx.lineTo(centerX, centerY);
-        ctx.fill();
+            // Ensure it stays within bounds
+            buildingX = Math.max(
+              screenX + 25,
+              Math.min(buildingX, screenX + 25 + maxX)
+            );
+            buildingY = Math.max(
+              screenY + 25,
+              Math.min(buildingY, screenY + 25 + maxY)
+            );
+          } else {
+            buildingX =
+              screenX + 25 + getSeededRandom(cellSeed, i * 4 + 2) * maxX;
+            buildingY =
+              screenY + 25 + getSeededRandom(cellSeed, i * 4 + 3) * maxY;
+          }
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
 
-        ctx.strokeStyle = "#da3333";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+          // Draw sentry
+          ctx.fillStyle = "#79171799";
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          const sentryAngle =
+            ((cellSeed % 8) * Math.PI) / 4 +
+            (cellSeed % 2 === 0 ? 1 : -1) * frameTime;
+          ctx.arc(
+            centerX,
+            centerY,
+            137.5,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
+          ctx.lineTo(centerX, centerY);
+          ctx.fill();
+          ctx.strokeStyle = "#da3333";
+          ctx.lineWidth = 1;
+          ctx.stroke();
 
-        checkSentry(
-          centerX,
-          centerY,
-          137.5,
-          sentryAngle,
-          sentryAngle + Math.PI / 3
-        );
+          checkSentry(
+            centerX,
+            centerY,
+            137.5,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
+        }
       }
     }
   }
@@ -201,18 +250,23 @@ function startGame() {
   }
 
   function movePlayer() {
-    if (keys.w || keys.ArrowUp) {
-      player.y -= 5;
+    const speed = 5;
+    let dx = 0;
+    let dy = 0;
+
+    if (keys.w || keys.ArrowUp) dy -= 1;
+    if (keys.s || keys.ArrowDown) dy += 1;
+    if (keys.a || keys.ArrowLeft) dx -= 1;
+    if (keys.d || keys.ArrowRight) dx += 1;
+
+    // Normalize diagonal movement
+    if (dx !== 0 && dy !== 0) {
+      dx /= Math.sqrt(2);
+      dy /= Math.sqrt(2);
     }
-    if (keys.a || keys.ArrowLeft) {
-      player.x -= 5;
-    }
-    if (keys.s || keys.ArrowDown) {
-      player.y += 5;
-    }
-    if (keys.d || keys.ArrowRight) {
-      player.x += 5;
-    }
+
+    player.x += dx * speed;
+    player.y += dy * speed;
   }
 
   function gameLoop() {
@@ -220,9 +274,9 @@ function startGame() {
     player.takingDamage = false;
     frameTime += 0.016;
 
-    movePlayer();
     drawGrid();
     drawPlayer();
+    movePlayer();
     requestAnimationFrame(gameLoop);
   }
 
