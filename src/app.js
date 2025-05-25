@@ -25,15 +25,19 @@ function startGame() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
+  let sentryTime = 0;
+  let bulletTime = 0;
+  const timeSeed = Math.floor(Date.now().toString().slice(-7));
+  const bullets = [];
+  const buildings = [];
+  const damagedBuildings = new Map();
+
   const player = {
     x: 0,
     y: 0,
     health: 100,
     takingDamage: false,
   };
-
-  let frameTime = 0;
-  const timeSeed = Math.floor(Date.now().toString().slice(-7));
 
   const mouse = {
     x: 0,
@@ -51,6 +55,11 @@ function startGame() {
     ArrowRight: false,
   };
 
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+
   window.addEventListener("keydown", (e) => {
     if (keys[e.key] !== undefined) {
       keys[e.key] = true;
@@ -63,17 +72,14 @@ function startGame() {
     }
   });
 
-  window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  });
-
   canvas.addEventListener("mousemove", (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
   });
 
-  const buildings = [];
+  canvas.addEventListener("click", (e) => {
+    fireBullet();
+  });
 
   function drawGrid() {
     buildings.length = 0;
@@ -148,6 +154,8 @@ function startGame() {
         ctx.fillRect(screenX + 25, screenY + 25, 225, 225);
 
         // Draw buildings
+        let sentryBuildingExists = false;
+
         for (let i = 0; i < 4; i++) {
           const buildingWidth = 50 + getSeededRandom(cellSeed, i * 4) * 50;
           const buildingHeight = 50 + getSeededRandom(cellSeed, i * 4 + 1) * 50;
@@ -184,126 +192,61 @@ function startGame() {
               screenY + 25 + getSeededRandom(cellSeed, i * 4 + 3) * maxY;
           }
 
-          // Store buildings
-          buildings.push({
+          const buildingKey = `${cellX},${cellY},${i}`;
+          const damageInfo = damagedBuildings.get(buildingKey);
+          if (damageInfo && damageInfo.health <= 0) {
+            if (i === 0) {
+              sentryBuildingExists = false;
+            }
+            continue;
+          }
+
+          const building = {
             x: buildingX - canvas.width / 2 + player.x,
             y: buildingY - canvas.height / 2 + player.y,
             width: buildingWidth,
             height: buildingHeight,
-          });
+            health: damageInfo ? damageInfo.health : 2,
+            key: buildingKey,
+          };
+          buildings.push(building);
 
-          ctx.fillStyle = "#000000";
+          if (i === 0) {
+            sentryBuildingExists = true;
+          }
+
+          ctx.fillStyle = building.health === 2 ? "#000000" : "#8B0000";
           ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
         }
 
-        // Draw sentry
-        ctx.fillStyle = "#79171799";
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        const sentryAngle =
-          ((cellSeed % 8) * Math.PI) / 4 +
-          (cellSeed % 2 === 0 ? 1 : -1) * frameTime;
-        ctx.arc(
-          centerX,
-          centerY,
-          137.5,
-          sentryAngle,
-          sentryAngle + Math.PI / 3
-        );
-        ctx.lineTo(centerX, centerY);
-        ctx.fill();
-        ctx.strokeStyle = "#da3333";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        // Only draw sentry if the sentry building exists
+        if (sentryBuildingExists) {
+          ctx.fillStyle = "#79171799";
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          const sentryAngle =
+            ((cellSeed % 8) * Math.PI) / 4 +
+            (cellSeed % 2 === 0 ? 1 : -1) * sentryTime;
+          ctx.arc(
+            centerX,
+            centerY,
+            137.5,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
+          ctx.lineTo(centerX, centerY);
+          ctx.fill();
+          ctx.strokeStyle = "#da3333";
+          ctx.lineWidth = 1;
+          ctx.stroke();
 
-        checkSentry(
-          centerX,
-          centerY,
-          137.5,
-          sentryAngle,
-          sentryAngle + Math.PI / 3
-        );
-      }
-    }
-  }
-
-  function checkBoxIntersection(boxA, boxB) {
-    return (
-      boxA.x < boxB.x + boxB.width &&
-      boxA.x + boxA.width > boxB.x &&
-      boxA.y < boxB.y + boxB.height &&
-      boxA.y + boxA.height > boxB.y
-    );
-  }
-
-  function checkSentry(sentryX, sentryY, radius, startAngle, endAngle) {
-    const playerHitBox = {
-      x: player.x - 12.5,
-      y: player.y - 12.5,
-      width: 25,
-      height: 25,
-    };
-
-    const worldSentryX = sentryX - canvas.width / 2 + player.x;
-    const worldSentryY = sentryY - canvas.height / 2 + player.y;
-
-    const corners = [
-      { x: playerHitBox.x, y: playerHitBox.y },
-      { x: playerHitBox.x + playerHitBox.width, y: playerHitBox.y },
-      { x: playerHitBox.x, y: playerHitBox.y + playerHitBox.height },
-      {
-        x: playerHitBox.x + playerHitBox.width,
-        y: playerHitBox.y + playerHitBox.height,
-      },
-    ];
-
-    corners.push({
-      x: playerHitBox.x + playerHitBox.width / 2,
-      y: playerHitBox.y,
-    });
-    corners.push({
-      x: playerHitBox.x + playerHitBox.width / 2,
-      y: playerHitBox.y + playerHitBox.height,
-    });
-    corners.push({
-      x: playerHitBox.x,
-      y: playerHitBox.y + playerHitBox.height / 2,
-    });
-    corners.push({
-      x: playerHitBox.x + playerHitBox.width,
-      y: playerHitBox.y + playerHitBox.height / 2,
-    });
-    corners.push({
-      x: playerHitBox.x + playerHitBox.width / 2,
-      y: playerHitBox.y + playerHitBox.height / 2,
-    });
-
-    // Normalize angles for comparison
-    let normalizedStartAngle = startAngle % (Math.PI * 2);
-    if (normalizedStartAngle < 0) normalizedStartAngle += Math.PI * 2;
-    let normalizedEndAngle = endAngle % (Math.PI * 2);
-    if (normalizedEndAngle < 0) normalizedEndAngle += Math.PI * 2;
-
-    for (const corner of corners) {
-      const dx = corner.x - worldSentryX;
-      const dy = corner.y - worldSentryY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance <= radius) {
-        let angle = Math.atan2(dy, dx);
-        if (angle < 0) angle += Math.PI * 2;
-
-        let inCone = false;
-        if (normalizedStartAngle <= normalizedEndAngle) {
-          inCone = angle >= normalizedStartAngle && angle <= normalizedEndAngle;
-        } else {
-          inCone = angle >= normalizedStartAngle || angle <= normalizedEndAngle;
-        }
-
-        if (inCone) {
-          player.takingDamage = true;
-          player.health = Math.max(0, player.health - 0.1);
-          return;
+          checkSentry(
+            centerX,
+            centerY,
+            137.5,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
         }
       }
     }
@@ -434,14 +377,244 @@ function startGame() {
     return { x: 0, y: 0 };
   }
 
+  function fireBullet() {
+    const currentTime = Date.now();
+    if (currentTime - bulletTime < 200) {
+      return; // Prevent firing too frequently
+    }
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const angle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
+
+    bullets.push({
+      x: player.x,
+      y: player.y,
+      dx: Math.cos(angle) * 7.5,
+      dy: Math.sin(angle) * 7.5,
+    });
+
+    bulletTime = currentTime;
+  }
+
+  function drawBullets() {
+    ctx.fillStyle = "#FFFF00";
+
+    for (const bullet of bullets) {
+      const screenX = canvas.width / 2 + (bullet.x - player.x);
+      const screenY = canvas.height / 2 + (bullet.y - player.y);
+
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function updateBullets() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const bullet = bullets[i];
+
+      const oldX = bullet.x;
+      const oldY = bullet.y;
+
+      bullet.dx *= 0.9899;
+      bullet.dy *= 0.9899;
+
+      if (Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy) < 2) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      bullet.x += bullet.dx;
+      bullet.y += bullet.dy;
+
+      const bulletHitBox = {
+        x: bullet.x - 2.5,
+        y: bullet.y - 2.5,
+        width: 5,
+        height: 5,
+      };
+
+      let collided = false;
+      for (let j = 0; j < buildings.length; j++) {
+        const building = buildings[j];
+        if (checkBoxIntersection(bulletHitBox, building)) {
+          const reflectionData = calculateReflection(
+            oldX,
+            oldY,
+            bullet.x,
+            bullet.y,
+            building
+          );
+
+          if (reflectionData) {
+            bullet.dx = reflectionData.newDx;
+            bullet.dy = reflectionData.newDy;
+            bullet.x = reflectionData.newX;
+            bullet.y = reflectionData.newY;
+
+            building.health--;
+
+            damagedBuildings.set(building.key, {
+              health: building.health,
+              x: building.x,
+              y: building.y,
+            });
+
+            collided = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  function calculateReflection(oldX, oldY, newX, newY, building) {
+    const bulletDx = newX - oldX;
+    const bulletDy = newY - oldY;
+
+    const bulletCenterX = (oldX + newX) / 2;
+    const bulletCenterY = (oldY + newY) / 2;
+
+    const distanceToLeft = Math.abs(bulletCenterX - building.x);
+    const distanceToRight = Math.abs(
+      bulletCenterX - (building.x + building.width)
+    );
+    const distanceToTop = Math.abs(bulletCenterY - building.y);
+    const distanceToBottom = Math.abs(
+      bulletCenterY - (building.y + building.height)
+    );
+
+    const minDistance = Math.min(
+      distanceToLeft,
+      distanceToRight,
+      distanceToTop,
+      distanceToBottom
+    );
+
+    let newDx = bulletDx;
+    let newDy = bulletDy;
+    let reflectedX = oldX;
+    let reflectedY = oldY;
+
+    if (minDistance === distanceToLeft || minDistance === distanceToRight) {
+      // Reflect X component
+      newDx = -bulletDx;
+      reflectedX =
+        minDistance === distanceToLeft
+          ? building.x - 10
+          : building.x + building.width + 10;
+      reflectedY = bulletCenterY;
+    } else {
+      // Reflect Y component
+      newDy = -bulletDy;
+      reflectedX = bulletCenterX;
+      reflectedY =
+        minDistance === distanceToTop
+          ? building.y - 10
+          : building.y + building.height + 10;
+    }
+
+    return {
+      newDx: newDx,
+      newDy: newDy,
+      newX: reflectedX,
+      newY: reflectedY,
+    };
+  }
+
+  function checkBoxIntersection(boxA, boxB) {
+    return (
+      boxA.x < boxB.x + boxB.width &&
+      boxA.x + boxA.width > boxB.x &&
+      boxA.y < boxB.y + boxB.height &&
+      boxA.y + boxA.height > boxB.y
+    );
+  }
+
+  function checkSentry(sentryX, sentryY, radius, startAngle, endAngle) {
+    const playerHitBox = {
+      x: player.x - 12.5,
+      y: player.y - 12.5,
+      width: 25,
+      height: 25,
+    };
+
+    const worldSentryX = sentryX - canvas.width / 2 + player.x;
+    const worldSentryY = sentryY - canvas.height / 2 + player.y;
+
+    const corners = [
+      { x: playerHitBox.x, y: playerHitBox.y },
+      { x: playerHitBox.x + playerHitBox.width, y: playerHitBox.y },
+      { x: playerHitBox.x, y: playerHitBox.y + playerHitBox.height },
+      {
+        x: playerHitBox.x + playerHitBox.width,
+        y: playerHitBox.y + playerHitBox.height,
+      },
+    ];
+
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y + playerHitBox.height,
+    });
+    corners.push({
+      x: playerHitBox.x,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
+
+    // Normalize angles for comparison
+    let normalizedStartAngle = startAngle % (Math.PI * 2);
+    if (normalizedStartAngle < 0) normalizedStartAngle += Math.PI * 2;
+    let normalizedEndAngle = endAngle % (Math.PI * 2);
+    if (normalizedEndAngle < 0) normalizedEndAngle += Math.PI * 2;
+
+    for (const corner of corners) {
+      const dx = corner.x - worldSentryX;
+      const dy = corner.y - worldSentryY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= radius) {
+        let angle = Math.atan2(dy, dx);
+        if (angle < 0) angle += Math.PI * 2;
+
+        let inCone = false;
+        if (normalizedStartAngle <= normalizedEndAngle) {
+          inCone = angle >= normalizedStartAngle && angle <= normalizedEndAngle;
+        } else {
+          inCone = angle >= normalizedStartAngle || angle <= normalizedEndAngle;
+        }
+
+        if (inCone) {
+          player.takingDamage = true;
+          player.health = Math.max(0, player.health - 0.1);
+          return;
+        }
+      }
+    }
+  }
+
   function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.takingDamage = false;
-    frameTime += 0.016;
+    sentryTime += 0.016;
 
     drawGrid();
     drawPlayer();
+    drawBullets();
     movePlayer();
+    updateBullets();
     requestAnimationFrame(gameLoop);
   }
 
