@@ -26,8 +26,8 @@ function startGame() {
   canvas.height = window.innerHeight;
 
   const player = {
-    x: 100,
-    y: 120,
+    x: 0,
+    y: 0,
     health: 100,
     takingDamage: false,
   };
@@ -78,32 +78,59 @@ function startGame() {
   function drawGrid() {
     buildings.length = 0;
 
+    const offsetX = player.x % 275;
+    const offsetY = player.y % 275;
+
     // Draw grid lines
     ctx.strokeStyle = "#15ff00";
     ctx.lineWidth = 2;
 
-    for (let x = -player.x % 275; x < canvas.width; x += 275) {
+    for (let x = canvas.width / 2 - offsetX; x < canvas.width; x += 275) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, canvas.height);
       ctx.stroke();
     }
-
-    for (let y = -player.y % 275; y < canvas.height; y += 275) {
+    for (let x = canvas.width / 2 - offsetX - 275; x >= 0; x -= 275) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = canvas.height / 2 - offsetY; y < canvas.height; y += 275) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    for (let y = canvas.height / 2 - offsetY - 275; y >= 0; y -= 275) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(canvas.width, y);
       ctx.stroke();
     }
 
-    for (let i = 0; i < Math.ceil(canvas.width / 275) + 1; i++) {
-      for (let j = 0; j < Math.ceil(canvas.height / 275) + 1; j++) {
-        const cellX = (Math.floor(player.x / 275) + i) * 275;
-        const cellY = (Math.floor(player.y / 275) + j) * 275;
-        const screenX = cellX - player.x;
-        const screenY = cellY - player.y;
+    // Draw buildings
+    const halfGridsX = Math.ceil(canvas.width / 275 / 2) + 1;
+    const halfGridsY = Math.ceil(canvas.height / 275 / 2) + 1;
+
+    for (let i = -halfGridsX; i <= halfGridsX; i++) {
+      for (let j = -halfGridsY; j <= halfGridsY; j++) {
+        const cellX = Math.floor(player.x / 275) * 275 + i * 275;
+        const cellY = Math.floor(player.y / 275) * 275 + j * 275;
+        const screenX = cellX - player.x + canvas.width / 2;
+        const screenY = cellY - player.y + canvas.height / 2;
         const centerX = screenX + 275 / 2;
         const centerY = screenY + 275 / 2;
+
+        if (
+          screenX + 275 < 0 ||
+          screenX > canvas.width ||
+          screenY + 275 < 0 ||
+          screenY > canvas.height
+        ) {
+          continue;
+        }
 
         const cellSeed =
           ((Math.abs(cellX) * 13) % 10000) +
@@ -157,10 +184,10 @@ function startGame() {
               screenY + 25 + getSeededRandom(cellSeed, i * 4 + 3) * maxY;
           }
 
-          // Store building for collision detection
+          // Store buildings
           buildings.push({
-            x: buildingX + player.x - canvas.width / 2,
-            y: buildingY + player.y - canvas.height / 2,
+            x: buildingX - canvas.width / 2 + player.x,
+            y: buildingY - canvas.height / 2 + player.y,
             width: buildingWidth,
             height: buildingHeight,
           });
@@ -210,35 +237,74 @@ function startGame() {
   }
 
   function checkSentry(sentryX, sentryY, radius, startAngle, endAngle) {
-    const dx = canvas.width / 2 - sentryX;
-    const dy = canvas.height / 2 - sentryY;
+    const playerHitBox = {
+      x: player.x - 12.5,
+      y: player.y - 12.5,
+      width: 25,
+      height: 25,
+    };
 
-    if (Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)) <= radius) {
-      // Normalize angle for comparison
-      let normalizedAngle = Math.atan2(dy, dx);
-      if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+    const worldSentryX = sentryX - canvas.width / 2 + player.x;
+    const worldSentryY = sentryY - canvas.height / 2 + player.y;
 
-      let normalizedStartAngle = startAngle % (Math.PI * 2);
-      if (normalizedStartAngle < 0) normalizedStartAngle += Math.PI * 2;
+    const corners = [
+      { x: playerHitBox.x, y: playerHitBox.y },
+      { x: playerHitBox.x + playerHitBox.width, y: playerHitBox.y },
+      { x: playerHitBox.x, y: playerHitBox.y + playerHitBox.height },
+      {
+        x: playerHitBox.x + playerHitBox.width,
+        y: playerHitBox.y + playerHitBox.height,
+      },
+    ];
 
-      let normalizedEndAngle = endAngle % (Math.PI * 2);
-      if (normalizedEndAngle < 0) normalizedEndAngle += Math.PI * 2;
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y + playerHitBox.height,
+    });
+    corners.push({
+      x: playerHitBox.x,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
+    corners.push({
+      x: playerHitBox.x + playerHitBox.width / 2,
+      y: playerHitBox.y + playerHitBox.height / 2,
+    });
 
-      // Handle angle wrap-around
-      let isInView = false;
-      if (normalizedStartAngle <= normalizedEndAngle) {
-        isInView =
-          normalizedAngle >= normalizedStartAngle &&
-          normalizedAngle <= normalizedEndAngle;
-      } else {
-        isInView =
-          normalizedAngle >= normalizedStartAngle ||
-          normalizedAngle <= normalizedEndAngle;
-      }
+    // Normalize angles for comparison
+    let normalizedStartAngle = startAngle % (Math.PI * 2);
+    if (normalizedStartAngle < 0) normalizedStartAngle += Math.PI * 2;
+    let normalizedEndAngle = endAngle % (Math.PI * 2);
+    if (normalizedEndAngle < 0) normalizedEndAngle += Math.PI * 2;
 
-      if (isInView) {
-        player.takingDamage = true;
-        player.health = player.health < 0 ? 0 : player.health - 0.1;
+    for (const corner of corners) {
+      const dx = corner.x - worldSentryX;
+      const dy = corner.y - worldSentryY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= radius) {
+        let angle = Math.atan2(dy, dx);
+        if (angle < 0) angle += Math.PI * 2;
+
+        let inCone = false;
+        if (normalizedStartAngle <= normalizedEndAngle) {
+          inCone = angle >= normalizedStartAngle && angle <= normalizedEndAngle;
+        } else {
+          inCone = angle >= normalizedStartAngle || angle <= normalizedEndAngle;
+        }
+
+        if (inCone) {
+          player.takingDamage = true;
+          player.health = Math.max(0, player.health - 0.1);
+          return;
+        }
       }
     }
   }
@@ -305,7 +371,7 @@ function startGame() {
     }
 
     // First check if we can move to the target position directly
-    const targetHitbox = {
+    const targetHitBox = {
       x: targetX - 20,
       y: targetY - 20,
       width: 40,
@@ -315,7 +381,7 @@ function startGame() {
     // If no collision with any buildings, allow full movement
     let collision = false;
     for (const building of buildings) {
-      if (checkBoxIntersection(targetHitbox, building)) {
+      if (checkBoxIntersection(targetHitBox, building)) {
         collision = true;
         break;
       }
@@ -326,7 +392,7 @@ function startGame() {
     }
 
     // Try X movement only
-    const xHitbox = {
+    const xHitBox = {
       x: targetX - 20,
       y: player.y - 20,
       width: 40,
@@ -335,14 +401,14 @@ function startGame() {
 
     let xCollision = false;
     for (const building of buildings) {
-      if (checkBoxIntersection(xHitbox, building)) {
+      if (checkBoxIntersection(xHitBox, building)) {
         xCollision = true;
         break;
       }
     }
 
     // Try Y movement only
-    const yHitbox = {
+    const yHitBox = {
       x: player.x - 20,
       y: targetY - 20,
       width: 40,
@@ -351,7 +417,7 @@ function startGame() {
 
     let yCollision = false;
     for (const building of buildings) {
-      if (checkBoxIntersection(yHitbox, building)) {
+      if (checkBoxIntersection(yHitBox, building)) {
         yCollision = true;
         break;
       }
