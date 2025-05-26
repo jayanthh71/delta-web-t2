@@ -29,6 +29,7 @@ function startGame() {
   let bulletTime = 0;
   const timeSeed = Math.floor(Date.now().toString().slice(-7));
   const bullets = [];
+  const keys = [];
   const buildings = [];
   const damagedBuildings = new Map();
 
@@ -37,14 +38,42 @@ function startGame() {
     y: 0,
     health: 100,
     takingDamage: false,
+    keys: 0,
   };
+
+  let baseStationCell = null;
+  let centralHubs = [];
+
+  function initializeBaseStation() {
+    if (baseStationCell === null) {
+      const halfGridsX = Math.ceil(canvas.width / 275 / 2) + 1;
+      const halfGridsY = Math.ceil(canvas.height / 275 / 2) + 1;
+
+      const cells = [];
+      for (let i = -halfGridsX; i <= halfGridsX; i++) {
+        for (let j = -halfGridsY; j <= halfGridsY; j++) {
+          const cellX = Math.floor(player.x / 275) * 275 + i * 275;
+          const cellY = Math.floor(player.y / 275) * 275 + j * 275;
+          cells.push({ x: cellX, y: cellY });
+        }
+      }
+
+      baseStationCell = cells[Math.floor(Math.random() * cells.length)];
+      centralHubs = [
+        { x: baseStationCell.x, y: baseStationCell.y - 275 * 5 },
+        { x: baseStationCell.x, y: baseStationCell.y + 275 * 5 },
+        { x: baseStationCell.x - 275 * 5, y: baseStationCell.y },
+        { x: baseStationCell.x + 275 * 5, y: baseStationCell.y },
+      ];
+    }
+  }
 
   const mouse = {
     x: 0,
     y: 0,
   };
 
-  const keys = {
+  const keyBindings = {
     w: false,
     a: false,
     s: false,
@@ -61,14 +90,14 @@ function startGame() {
   });
 
   window.addEventListener("keydown", (e) => {
-    if (keys[e.key] !== undefined) {
-      keys[e.key] = true;
+    if (keyBindings[e.key] !== undefined) {
+      keyBindings[e.key] = true;
     }
   });
 
   window.addEventListener("keyup", (e) => {
-    if (keys[e.key] !== undefined) {
-      keys[e.key] = false;
+    if (keyBindings[e.key] !== undefined) {
+      keyBindings[e.key] = false;
     }
   });
 
@@ -83,6 +112,7 @@ function startGame() {
 
   function drawGrid() {
     buildings.length = 0;
+    initializeBaseStation();
 
     const offsetX = player.x % 275;
     const offsetY = player.y % 275;
@@ -149,8 +179,21 @@ function startGame() {
           return (val - Math.floor(val)) / 1; // Between 0 and 1
         };
 
-        // Draw grass
-        ctx.fillStyle = "#006500";
+        const isBaseStation =
+          baseStationCell &&
+          cellX === baseStationCell.x &&
+          cellY === baseStationCell.y;
+
+        const isCentralHub = centralHubs.some(
+          (hub) => hub.x === cellX && hub.y === cellY
+        );
+
+        // Draw background
+        if (isBaseStation) {
+          ctx.fillStyle = "#00FFFF";
+        } else if (isCentralHub) {
+          ctx.fillStyle = "#FFA500";
+        } else ctx.fillStyle = "#006500";
         ctx.fillRect(screenX + 25, screenY + 25, 225, 225);
 
         // Draw buildings
@@ -219,8 +262,8 @@ function startGame() {
           ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
         }
 
-        // Only draw sentry if the sentry building exists
-        if (sentryBuildingExists) {
+        // Draw sentry
+        if (sentryBuildingExists && !isBaseStation && !isCentralHub) {
           ctx.fillStyle = "#79171799";
           ctx.beginPath();
           ctx.moveTo(centerX, centerY);
@@ -278,6 +321,101 @@ function startGame() {
     ctx.stroke();
 
     ctx.setLineDash([]);
+
+    if (baseStationCell) {
+      const baseStationCenterX = baseStationCell.x + 137.5;
+      const baseStationCenterY = baseStationCell.y + 137.5;
+
+      const baseStationDx = baseStationCenterX - player.x;
+      const baseStationDy = baseStationCenterY - player.y;
+
+      const baseAngle = Math.atan2(baseStationDy, baseStationDx);
+
+      // Draw base station arrow
+      ctx.fillStyle = "#00FFFF";
+      ctx.strokeStyle = "#00FFFF";
+      ctx.lineWidth = 2;
+
+      const arrowStartX = centerX + Math.cos(baseAngle) * 22;
+      const arrowStartY = centerY + Math.sin(baseAngle) * 22;
+      const arrowTipX = centerX + Math.cos(baseAngle) * 35;
+      const arrowTipY = centerY + Math.sin(baseAngle) * 35;
+
+      ctx.beginPath();
+      ctx.moveTo(arrowStartX, arrowStartY);
+      ctx.lineTo(arrowTipX, arrowTipY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(arrowTipX, arrowTipY);
+      ctx.lineTo(
+        arrowTipX - Math.cos(baseAngle - 0.4) * 6,
+        arrowTipY - Math.sin(baseAngle - 0.4) * 6
+      );
+      ctx.moveTo(arrowTipX, arrowTipY);
+      ctx.lineTo(
+        arrowTipX - Math.cos(baseAngle + 0.4) * 6,
+        arrowTipY - Math.sin(baseAngle + 0.4) * 6
+      );
+      ctx.stroke();
+    }
+
+    // Draw arrow pointing to closest central hub
+    if (centralHubs.length > 0) {
+      // Find the closest central hub
+      let closestHub = null;
+      let closestDistance = Infinity;
+
+      for (const hub of centralHubs) {
+        const hubCenterX = hub.x + 137.5;
+        const hubCenterY = hub.y + 137.5;
+        const dx = hubCenterX - player.x;
+        const dy = hubCenterY - player.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestHub = hub;
+        }
+      }
+
+      if (closestHub) {
+        const hubCenterX = closestHub.x + 137.5;
+        const hubCenterY = closestHub.y + 137.5;
+
+        const hubDx = hubCenterX - player.x;
+        const hubDy = hubCenterY - player.y;
+        const hubAngle = Math.atan2(hubDy, hubDx);
+
+        // Draw central hub arrow
+        ctx.fillStyle = "#FFA500";
+        ctx.strokeStyle = "#FFA500";
+        ctx.lineWidth = 2;
+
+        const arrowStartX = centerX + Math.cos(hubAngle) * 22;
+        const arrowStartY = centerY + Math.sin(hubAngle) * 22;
+        const arrowTipX = centerX + Math.cos(hubAngle) * 35;
+        const arrowTipY = centerY + Math.sin(hubAngle) * 35;
+
+        ctx.beginPath();
+        ctx.moveTo(arrowStartX, arrowStartY);
+        ctx.lineTo(arrowTipX, arrowTipY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.lineTo(
+          arrowTipX - Math.cos(hubAngle - 0.4) * 6,
+          arrowTipY - Math.sin(hubAngle - 0.4) * 6
+        );
+        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.lineTo(
+          arrowTipX - Math.cos(hubAngle + 0.4) * 6,
+          arrowTipY - Math.sin(hubAngle + 0.4) * 6
+        );
+        ctx.stroke();
+      }
+    }
   }
 
   function movePlayer() {
@@ -285,10 +423,10 @@ function startGame() {
     let dx = 0;
     let dy = 0;
 
-    if (keys.w || keys.ArrowUp) dy -= 1;
-    if (keys.s || keys.ArrowDown) dy += 1;
-    if (keys.a || keys.ArrowLeft) dx -= 1;
-    if (keys.d || keys.ArrowRight) dx += 1;
+    if (keyBindings.w || keyBindings.ArrowUp) dy -= 1;
+    if (keyBindings.s || keyBindings.ArrowDown) dy += 1;
+    if (keyBindings.a || keyBindings.ArrowLeft) dx -= 1;
+    if (keyBindings.d || keyBindings.ArrowRight) dx += 1;
 
     // Normalize diagonal movement
     if (dx !== 0 && dy !== 0) {
@@ -605,16 +743,111 @@ function startGame() {
     }
   }
 
+  function generateKeys() {
+    const halfGridsX = Math.ceil(canvas.width / 275 / 2) + 3;
+    const halfGridsY = Math.ceil(canvas.height / 275 / 2) + 3;
+
+    for (let i = -halfGridsX; i <= halfGridsX; i++) {
+      for (let j = -halfGridsY; j <= halfGridsY; j++) {
+        const cellX = Math.floor(player.x / 275) * 275 + i * 275;
+        const cellY = Math.floor(player.y / 275) * 275 + j * 275;
+
+        const cellSeed =
+          ((Math.abs(cellX) * 13) % 10000) +
+          ((Math.abs(cellY) * 17) % 10000) +
+          (timeSeed % 10000);
+
+        const getSeededRandom = (seed, index) => {
+          const val = Math.sin(seed * 1000 + index * 100) * 10000;
+          return (val - Math.floor(val)) / 1;
+        };
+
+        // Check if this cell should have a key
+        if (getSeededRandom(cellSeed, 999) < 0.25) {
+          const keyX = cellX + 50 + getSeededRandom(cellSeed, 1000) * 175;
+          const keyY = cellY + 50 + getSeededRandom(cellSeed, 1001) * 175;
+
+          const keyId = `${cellX},${cellY}`;
+
+          // Check if this key hasn't been collected yet
+          const existingKey = keys.find((key) => key.id === keyId);
+          if (!existingKey) {
+            keys.push({
+              id: keyId,
+              x: keyX,
+              y: keyY,
+              collected: false,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  function drawKeys() {
+    ctx.fillStyle = "#8A2BE2";
+
+    for (const key of keys) {
+      if (key.collected) continue;
+
+      const screenX = canvas.width / 2 + (key.x - player.x);
+      const screenY = canvas.height / 2 + (key.y - player.y);
+
+      if (
+        screenX >= -10 &&
+        screenX <= canvas.width + 10 &&
+        screenY >= -10 &&
+        screenY <= canvas.height + 10
+      ) {
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#9370DB";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function checkKeyCollection() {
+    const playerHitBox = {
+      x: player.x - 20,
+      y: player.y - 20,
+      width: 40,
+      height: 40,
+    };
+
+    for (const key of keys) {
+      if (key.collected) continue;
+
+      const keyHitBox = {
+        x: key.x - 8,
+        y: key.y - 8,
+        width: 16,
+        height: 16,
+      };
+
+      if (checkBoxIntersection(playerHitBox, keyHitBox)) {
+        key.collected = true;
+        player.keys++;
+      }
+    }
+  }
+
   function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.takingDamage = false;
     sentryTime += 0.016;
 
+    generateKeys();
     drawGrid();
+    drawKeys();
     drawPlayer();
     drawBullets();
     movePlayer();
     updateBullets();
+    checkKeyCollection();
     requestAnimationFrame(gameLoop);
   }
 
