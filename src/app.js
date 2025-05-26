@@ -835,6 +835,29 @@ function startGame() {
     }
   }
 
+  function drawPostProcessing() {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.max(canvas.width, canvas.height) * 0.85;
+
+    // Draw Vignette
+    const gradient = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      0,
+      centerX,
+      centerY,
+      radius
+    );
+    gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0.8)");
+
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.takingDamage = false;
@@ -848,6 +871,7 @@ function startGame() {
     movePlayer();
     updateBullets();
     checkKeyCollection();
+    drawPostProcessing();
     requestAnimationFrame(gameLoop);
   }
 
