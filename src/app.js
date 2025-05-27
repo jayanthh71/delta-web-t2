@@ -201,7 +201,7 @@ function startGame() {
           ctx.fillStyle = "#00FFFF";
         } else if (isCentralHub) {
           ctx.fillStyle = "#FFA500";
-        } else ctx.fillStyle = "#006500";
+        } else ctx.fillStyle = "#008800";
         ctx.fillRect(screenX + 25, screenY + 25, 225, 225);
 
         // Draw buildings
@@ -266,42 +266,90 @@ function startGame() {
             sentryBuildingExists = true;
           }
 
-          ctx.fillStyle = building.health === 2 ? "#000000" : "#8B0000";
+          const shadowOffsetX = 4;
+          const shadowOffsetY = 4;
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+          ctx.fillRect(
+            buildingX + shadowOffsetX,
+            buildingY + shadowOffsetY,
+            buildingWidth,
+            buildingHeight
+          );
+
+          if (building.health === 2) {
+            ctx.fillStyle = "#1a1a1a";
+          } else {
+            ctx.fillStyle = "#4a0e0e";
+          }
           ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
+
+          ctx.strokeStyle = building.health === 2 ? "#00FFFF" : "#FF6600";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(buildingX, buildingY, buildingWidth, buildingHeight);
         }
 
         // Draw blue circle
         if (isBaseStation) {
-          ctx.fillStyle = "#0066FF";
+          const shadowOffsetX = 5;
+          const shadowOffsetY = 5;
+          const radius = 60;
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 60, 0, Math.PI * 2);
+          ctx.arc(
+            centerX + shadowOffsetX,
+            centerY + shadowOffsetY,
+            radius,
+            0,
+            Math.PI * 2
+          );
           ctx.fill();
 
-          // Display shard delivery instruction if player has shards
-          if (player.shards > 0) {
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "bold 16px Bruno Ace SC";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("Deliver Shards", centerX, centerY - 10);
-            ctx.fillText(
-              `+${player.shards * 10} Health`,
-              centerX,
-              centerY + 10
-            );
-          }
+          // Draw main base station with solid color
+          ctx.fillStyle = "#0088DD";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Add border
+          ctx.strokeStyle = "#00FFFF";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.stroke();
         }
 
         // Draw red circle
         if (isCentralHub) {
-          ctx.fillStyle = "#FF0000";
+          const shadowOffsetX = 4;
+          const shadowOffsetY = 4;
+          const radius = 40;
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+          ctx.arc(
+            centerX + shadowOffsetX,
+            centerY + shadowOffsetY,
+            radius,
+            0,
+            Math.PI * 2
+          );
           ctx.fill();
 
-          // Display keys required for next shard
+          ctx.fillStyle = "#DD2222";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "#FF6600";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+
           ctx.fillStyle = "#FFFFFF";
-          ctx.font = "bold 20px Bruno Ace SC";
+          ctx.font = "bold 24px Bruno Ace SC";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(keysRequired.toString(), centerX, centerY);
@@ -309,29 +357,71 @@ function startGame() {
 
         // Draw sentry
         if (sentryBuildingExists && !isBaseStation && !isCentralHub) {
-          ctx.fillStyle = "#79171799";
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
           const sentryAngle =
             ((cellSeed % 8) * Math.PI) / 4 +
             (cellSeed % 2 === 0 ? 1 : -1) * sentryTime;
+          const shadowOffsetX = 6;
+          const shadowOffsetY = 6;
+          const radius = 137.5;
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+          ctx.beginPath();
+          ctx.moveTo(centerX + shadowOffsetX, centerY + shadowOffsetY);
+          ctx.arc(
+            centerX + shadowOffsetX,
+            centerY + shadowOffsetY,
+            radius,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
+          ctx.lineTo(centerX + shadowOffsetX, centerY + shadowOffsetY);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(139, 0, 0, 0.7)";
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
           ctx.arc(
             centerX,
             centerY,
-            137.5,
+            radius,
             sentryAngle,
             sentryAngle + Math.PI / 3
           );
           ctx.lineTo(centerX, centerY);
           ctx.fill();
-          ctx.strokeStyle = "#da3333";
-          ctx.lineWidth = 1;
+
+          ctx.strokeStyle = "#FF4444";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.arc(
+            centerX,
+            centerY,
+            radius,
+            sentryAngle,
+            sentryAngle + Math.PI / 3
+          );
+          ctx.lineTo(centerX, centerY);
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.beginPath();
+          ctx.arc(centerX + 2, centerY + 2, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#FF0000";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "#FFAAAA";
+          ctx.lineWidth = 2;
           ctx.stroke();
 
           checkSentry(
             centerX,
             centerY,
-            137.5,
+            radius,
             sentryAngle,
             sentryAngle + Math.PI / 3
           );
@@ -345,6 +435,21 @@ function startGame() {
     const centerY = canvas.height / 2;
     const angle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
 
+    const shadowOffsetX = 3;
+    const shadowOffsetY = 3;
+
+    // Draw player
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.beginPath();
+    ctx.arc(
+      centerX + shadowOffsetX,
+      centerY + shadowOffsetY,
+      20,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+
     if (player.takingDamage) {
       ctx.fillStyle = "#da3333";
     } else {
@@ -356,6 +461,18 @@ function startGame() {
     ctx.fill();
 
     // Draw direction indicator
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+
+    ctx.beginPath();
+    ctx.moveTo(
+      centerX + Math.cos(angle) * 20 + shadowOffsetX,
+      centerY + Math.sin(angle) * 20 + shadowOffsetY
+    );
+    ctx.lineTo(mouse.x + shadowOffsetX, mouse.y + shadowOffsetY);
+    ctx.stroke();
+
     ctx.strokeStyle = "#d1ffcd";
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
@@ -376,32 +493,26 @@ function startGame() {
 
       const baseAngle = Math.atan2(baseStationDy, baseStationDx);
 
-      // Draw base station arrow
-      ctx.fillStyle = "#00FFFF";
-      ctx.strokeStyle = "#00FFFF";
-      ctx.lineWidth = 2;
+      const startAngle = baseAngle - Math.PI / 8;
+      const endAngle = baseAngle + Math.PI / 8;
 
-      const arrowStartX = centerX + Math.cos(baseAngle) * 22;
-      const arrowStartY = centerY + Math.sin(baseAngle) * 22;
-      const arrowTipX = centerX + Math.cos(baseAngle) * 35;
-      const arrowTipY = centerY + Math.sin(baseAngle) * 35;
-
+      // Draw base station arc
+      ctx.strokeStyle = "rgba(0, 100, 100, 0.4)";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(arrowStartX, arrowStartY);
-      ctx.lineTo(arrowTipX, arrowTipY);
+      ctx.arc(
+        centerX + shadowOffsetX,
+        centerY + shadowOffsetY,
+        30,
+        startAngle,
+        endAngle
+      );
       ctx.stroke();
 
+      ctx.strokeStyle = "#00FFFF";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(arrowTipX, arrowTipY);
-      ctx.lineTo(
-        arrowTipX - Math.cos(baseAngle - 0.4) * 6,
-        arrowTipY - Math.sin(baseAngle - 0.4) * 6
-      );
-      ctx.moveTo(arrowTipX, arrowTipY);
-      ctx.lineTo(
-        arrowTipX - Math.cos(baseAngle + 0.4) * 6,
-        arrowTipY - Math.sin(baseAngle + 0.4) * 6
-      );
+      ctx.arc(centerX, centerY, 30, startAngle, endAngle);
       ctx.stroke();
     }
 
@@ -413,32 +524,26 @@ function startGame() {
       const hubDy = hubCenterY - player.y;
       const hubAngle = Math.atan2(hubDy, hubDx);
 
-      // Draw central hub arrow
-      ctx.fillStyle = "#FFA500";
-      ctx.strokeStyle = "#FFA500";
-      ctx.lineWidth = 2;
+      const startAngle = hubAngle - Math.PI / 8;
+      const endAngle = hubAngle + Math.PI / 8;
 
-      const arrowStartX = centerX + Math.cos(hubAngle) * 22;
-      const arrowStartY = centerY + Math.sin(hubAngle) * 22;
-      const arrowTipX = centerX + Math.cos(hubAngle) * 35;
-      const arrowTipY = centerY + Math.sin(hubAngle) * 35;
-
+      // Draw central hub arc
+      ctx.strokeStyle = "rgba(100, 50, 0, 0.4)";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(arrowStartX, arrowStartY);
-      ctx.lineTo(arrowTipX, arrowTipY);
+      ctx.arc(
+        centerX + shadowOffsetX,
+        centerY + shadowOffsetY,
+        30,
+        startAngle,
+        endAngle
+      );
       ctx.stroke();
 
+      ctx.strokeStyle = "#FFA500";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(arrowTipX, arrowTipY);
-      ctx.lineTo(
-        arrowTipX - Math.cos(hubAngle - 0.4) * 6,
-        arrowTipY - Math.sin(hubAngle - 0.4) * 6
-      );
-      ctx.moveTo(arrowTipX, arrowTipY);
-      ctx.lineTo(
-        arrowTipX - Math.cos(hubAngle + 0.4) * 6,
-        arrowTipY - Math.sin(hubAngle + 0.4) * 6
-      );
+      ctx.arc(centerX, centerY, 30, startAngle, endAngle);
       ctx.stroke();
     }
   }
@@ -561,12 +666,26 @@ function startGame() {
   }
 
   function drawBullets() {
-    ctx.fillStyle = "#FFFF00";
+    const shadowOffsetX = 2;
+    const shadowOffsetY = 2;
 
     for (const bullet of bullets) {
       const screenX = canvas.width / 2 + (bullet.x - player.x);
       const screenY = canvas.height / 2 + (bullet.y - player.y);
 
+      // Draw bullet
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.beginPath();
+      ctx.arc(
+        screenX + shadowOffsetX,
+        screenY + shadowOffsetY,
+        5,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.fillStyle = "#FFFF00";
       ctx.beginPath();
       ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -810,7 +929,11 @@ function startGame() {
   }
 
   function drawKeys() {
-    ctx.fillStyle = "#8A2BE2";
+    const shadowOffsetX = 3;
+    const shadowOffsetY = 3;
+
+    const time = Date.now() * 0.005;
+    const glowIntensity = 0.7 + 0.3 * Math.sin(time);
 
     for (const key of keys) {
       if (key.collected) continue;
@@ -819,16 +942,36 @@ function startGame() {
       const screenY = canvas.height / 2 + (key.y - player.y);
 
       if (
-        screenX >= -10 &&
-        screenX <= canvas.width + 10 &&
-        screenY >= -10 &&
-        screenY <= canvas.height + 10
+        screenX >= -20 &&
+        screenX <= canvas.width + 20 &&
+        screenY >= -20 &&
+        screenY <= canvas.height + 20
       ) {
+        ctx.save();
+        ctx.globalAlpha = 0.5 * glowIntensity;
+        ctx.fillStyle = "#FF00FF";
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.arc(
+          screenX + shadowOffsetX,
+          screenY + shadowOffsetY,
+          8,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.fillStyle = "#8A2BE2";
         ctx.beginPath();
         ctx.arc(screenX, screenY, 8, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = "#9370DB";
+        ctx.strokeStyle = "#BA55D3";
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -963,8 +1106,8 @@ function startGame() {
       { x: centerX - halfWidth, y: centerY + 4 },
     ];
 
-    ctx.fillStyle = "#2a2a2a";
-    ctx.strokeStyle = "#15ff00";
+    ctx.fillStyle = "#1a1a1a";
+    ctx.strokeStyle = "#00FFFF";
     ctx.lineWidth = 2;
 
     ctx.beginPath();
@@ -1029,8 +1172,8 @@ function startGame() {
       });
     }
 
-    ctx.fillStyle = "#2a2a2a";
-    ctx.strokeStyle = "#15ff00";
+    ctx.fillStyle = "#1a1a1a";
+    ctx.strokeStyle = "#00FFFF";
     ctx.lineWidth = 2;
 
     ctx.beginPath();
@@ -1111,7 +1254,22 @@ function startGame() {
     const centerY = 75;
     const radius = 50;
 
-    ctx.strokeStyle = "#15ff00";
+    ctx.fillStyle = "#1a1a1a";
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "#00FFFF";
     ctx.lineWidth = 2;
 
     ctx.beginPath();
