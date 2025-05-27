@@ -280,7 +280,7 @@ function startGame() {
           // Display shard delivery instruction if player has shards
           if (player.shards > 0) {
             ctx.fillStyle = "#FFFFFF";
-            ctx.font = "bold 16px Arial";
+            ctx.font = "bold 16px Bruno Ace SC";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText("Deliver Shards", centerX, centerY - 10);
@@ -301,7 +301,7 @@ function startGame() {
 
           // Display keys required for next shard
           ctx.fillStyle = "#FFFFFF";
-          ctx.font = "bold 20px Arial";
+          ctx.font = "bold 20px Bruno Ace SC";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(keysRequired.toString(), centerX, centerY);
@@ -938,6 +938,207 @@ function startGame() {
     ctx.globalCompositeOperation = "source-over";
   }
 
+  function drawHUD() {
+    drawSystemHealthBar();
+    drawPlayerHealthBar();
+    drawKeysAndShardsDisplay();
+  }
+
+  function drawSystemHealthBar() {
+    const centerX = canvas.width / 2;
+    const centerY = 75;
+    const width = 300;
+    const height = 40;
+
+    const halfWidth = width / 2;
+    const quarterHeight = height / 4;
+    const halfHeight = height / 2;
+
+    const points = [
+      { x: centerX - halfWidth + quarterHeight, y: centerY - halfHeight },
+      { x: centerX + halfWidth - quarterHeight, y: centerY - halfHeight },
+      { x: centerX + halfWidth, y: centerY + 4 },
+      { x: centerX + halfWidth - quarterHeight, y: centerY + halfHeight },
+      { x: centerX - halfWidth + quarterHeight, y: centerY + halfHeight },
+      { x: centerX - halfWidth, y: centerY + 4 },
+    ];
+
+    ctx.fillStyle = "#2a2a2a";
+    ctx.strokeStyle = "#15ff00";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const healthPercent = systemHealth / 100;
+    if (healthPercent > 0) {
+      if (systemHealth > 60) {
+        ctx.fillStyle = "#00ff00";
+      } else if (systemHealth > 30) {
+        ctx.fillStyle = "#ffff00";
+      } else {
+        ctx.fillStyle = "#ff0000";
+      }
+
+      const fillEndX = centerX - halfWidth + width * healthPercent;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(points[0].x + 2, points[0].y + 2);
+      ctx.lineTo(points[1].x - 2, points[1].y + 2);
+      ctx.lineTo(points[2].x - 2, points[2].y);
+      ctx.lineTo(points[3].x - 2, points[3].y - 2);
+      ctx.lineTo(points[4].x + 2, points[4].y - 2);
+      ctx.lineTo(points[5].x + 2, points[5].y);
+      ctx.closePath();
+      ctx.clip();
+      ctx.fillRect(
+        centerX - halfWidth + 2,
+        centerY - halfHeight + 2,
+        fillEndX - (centerX - halfWidth),
+        height - 4
+      );
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "#000000  ";
+    ctx.font = "bold 24px Bruno Ace SC";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("SYSTEM", centerX, centerY);
+  }
+
+  function drawPlayerHealthBar() {
+    const centerX = 280;
+    const centerY = 75;
+    const radius = 50;
+    const innerRadius = 45;
+
+    const hexagonVertices = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3 - Math.PI / 2 + Math.PI / 6;
+      hexagonVertices.push({
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      });
+    }
+
+    ctx.fillStyle = "#2a2a2a";
+    ctx.strokeStyle = "#15ff00";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(hexagonVertices[0].x, hexagonVertices[0].y);
+    for (let i = 1; i < 6; i++) {
+      ctx.lineTo(hexagonVertices[i].x, hexagonVertices[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const healthPercent = player.health / 100;
+    if (healthPercent > 0) {
+      if (player.health > 60) {
+        ctx.strokeStyle = "#00ff00";
+      } else if (player.health > 30) {
+        ctx.strokeStyle = "#ffff00";
+      } else {
+        ctx.strokeStyle = "#ff0000";
+      }
+
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+
+      const innerHexagonVertices = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3 - Math.PI / 2 + Math.PI / 6;
+        innerHexagonVertices.push({
+          x: centerX + innerRadius * Math.cos(angle),
+          y: centerY + innerRadius * Math.sin(angle),
+        });
+      }
+
+      const fullSegments = Math.floor(healthPercent * 6);
+      const partialSegment = healthPercent * 6 - fullSegments;
+
+      for (let i = 0; i < fullSegments; i++) {
+        const segmentIndex = (6 - i) % 6;
+        const nextIndex = (6 - i - 1) % 6;
+
+        const startVertex = innerHexagonVertices[segmentIndex];
+        const endVertex = innerHexagonVertices[nextIndex];
+
+        ctx.beginPath();
+        ctx.moveTo(startVertex.x, startVertex.y);
+        ctx.lineTo(endVertex.x, endVertex.y);
+        ctx.stroke();
+      }
+
+      if (partialSegment > 0 && fullSegments < 6) {
+        const segmentIndex = (6 - fullSegments) % 6;
+        const nextIndex = (6 - fullSegments - 1) % 6;
+
+        const startVertex = innerHexagonVertices[segmentIndex];
+        const endVertex = innerHexagonVertices[nextIndex];
+
+        const partialEndX =
+          startVertex.x + (endVertex.x - startVertex.x) * partialSegment;
+        const partialEndY =
+          startVertex.y + (endVertex.y - startVertex.y) * partialSegment;
+
+        ctx.beginPath();
+        ctx.moveTo(startVertex.x, startVertex.y);
+        ctx.lineTo(partialEndX, partialEndY);
+        ctx.stroke();
+      }
+    }
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px Bruno Ace SC";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(Math.round(player.health), centerX, centerY);
+  }
+
+  function drawKeysAndShardsDisplay() {
+    const centerX = canvas.width - 280;
+    const centerY = 75;
+    const radius = 50;
+
+    ctx.strokeStyle = "#15ff00";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 14px Bruno Ace SC";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${player.keys}`, centerX, centerY - 10);
+    ctx.fillText(`${player.shards}`, centerX, centerY + 10);
+    ctx.font = "10px Bruno Ace SC";
+    ctx.fillText("KEYS", centerX, centerY - 25);
+    ctx.fillText("SHARDS", centerX, centerY + 25);
+  }
+
   function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.takingDamage = false;
@@ -955,6 +1156,7 @@ function startGame() {
     checkCentralHubExchange();
     checkBaseStationDelivery();
     drawPostProcessing();
+    drawHUD();
     requestAnimationFrame(gameLoop);
   }
 
