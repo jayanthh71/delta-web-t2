@@ -27,6 +27,7 @@ function startGame() {
 
   let sentryTime = 0;
   let bulletTime = 0;
+  let healthTime = Date.now();
   const timeSeed = Math.floor(Date.now().toString().slice(-7));
   const bullets = [];
   const keys = [];
@@ -39,13 +40,16 @@ function startGame() {
     health: 100,
     takingDamage: false,
     keys: 0,
+    shards: 0,
   };
 
-  let baseStationCell = null;
-  let centralHubs = [];
+  let systemHealth = 100;
+  let baseStation = null;
+  let centralHub = null;
+  let keysRequired = Math.floor(Math.random() * 5) + 1;
 
   function initializeBaseStation() {
-    if (baseStationCell === null) {
+    if (baseStation === null) {
       const halfGridsX = Math.ceil(canvas.width / 275 / 2) + 1;
       const halfGridsY = Math.ceil(canvas.height / 275 / 2) + 1;
 
@@ -58,13 +62,20 @@ function startGame() {
         }
       }
 
-      baseStationCell = cells[Math.floor(Math.random() * cells.length)];
-      centralHubs = [
-        { x: baseStationCell.x, y: baseStationCell.y - 275 * 5 },
-        { x: baseStationCell.x, y: baseStationCell.y + 275 * 5 },
-        { x: baseStationCell.x - 275 * 5, y: baseStationCell.y },
-        { x: baseStationCell.x + 275 * 5, y: baseStationCell.y },
-      ];
+      baseStation = cells[Math.floor(Math.random() * cells.length)];
+      const ringPositions = [];
+      for (let i = -5; i <= 5; i++) {
+        for (let j = -5; j <= 5; j++) {
+          if (Math.abs(i) === 5 || Math.abs(j) === 5) {
+            ringPositions.push({
+              x: baseStation.x + i * 275,
+              y: baseStation.y + j * 275,
+            });
+          }
+        }
+      }
+      centralHub =
+        ringPositions[Math.floor(Math.random() * ringPositions.length)];
     }
   }
 
@@ -180,13 +191,10 @@ function startGame() {
         };
 
         const isBaseStation =
-          baseStationCell &&
-          cellX === baseStationCell.x &&
-          cellY === baseStationCell.y;
+          baseStation && cellX === baseStation.x && cellY === baseStation.y;
 
-        const isCentralHub = centralHubs.some(
-          (hub) => hub.x === cellX && hub.y === cellY
-        );
+        const isCentralHub =
+          centralHub && cellX === centralHub.x && cellY === centralHub.y;
 
         // Draw background
         if (isBaseStation) {
@@ -262,6 +270,43 @@ function startGame() {
           ctx.fillRect(buildingX, buildingY, buildingWidth, buildingHeight);
         }
 
+        // Draw blue circle
+        if (isBaseStation) {
+          ctx.fillStyle = "#0066FF";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 60, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Display shard delivery instruction if player has shards
+          if (player.shards > 0) {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Deliver Shards", centerX, centerY - 10);
+            ctx.fillText(
+              `+${player.shards * 10} Health`,
+              centerX,
+              centerY + 10
+            );
+          }
+        }
+
+        // Draw red circle
+        if (isCentralHub) {
+          ctx.fillStyle = "#FF0000";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Display keys required for next shard
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = "bold 20px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(keysRequired.toString(), centerX, centerY);
+        }
+
         // Draw sentry
         if (sentryBuildingExists && !isBaseStation && !isCentralHub) {
           ctx.fillStyle = "#79171799";
@@ -322,9 +367,9 @@ function startGame() {
 
     ctx.setLineDash([]);
 
-    if (baseStationCell) {
-      const baseStationCenterX = baseStationCell.x + 137.5;
-      const baseStationCenterY = baseStationCell.y + 137.5;
+    if (baseStation) {
+      const baseStationCenterX = baseStation.x + 137.5;
+      const baseStationCenterY = baseStation.y + 137.5;
 
       const baseStationDx = baseStationCenterX - player.x;
       const baseStationDy = baseStationCenterY - player.y;
@@ -360,61 +405,41 @@ function startGame() {
       ctx.stroke();
     }
 
-    // Draw arrow pointing to closest central hub
-    if (centralHubs.length > 0) {
-      // Find the closest central hub
-      let closestHub = null;
-      let closestDistance = Infinity;
+    if (centralHub) {
+      const hubCenterX = centralHub.x + 137.5;
+      const hubCenterY = centralHub.y + 137.5;
 
-      for (const hub of centralHubs) {
-        const hubCenterX = hub.x + 137.5;
-        const hubCenterY = hub.y + 137.5;
-        const dx = hubCenterX - player.x;
-        const dy = hubCenterY - player.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+      const hubDx = hubCenterX - player.x;
+      const hubDy = hubCenterY - player.y;
+      const hubAngle = Math.atan2(hubDy, hubDx);
 
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestHub = hub;
-        }
-      }
+      // Draw central hub arrow
+      ctx.fillStyle = "#FFA500";
+      ctx.strokeStyle = "#FFA500";
+      ctx.lineWidth = 2;
 
-      if (closestHub) {
-        const hubCenterX = closestHub.x + 137.5;
-        const hubCenterY = closestHub.y + 137.5;
+      const arrowStartX = centerX + Math.cos(hubAngle) * 22;
+      const arrowStartY = centerY + Math.sin(hubAngle) * 22;
+      const arrowTipX = centerX + Math.cos(hubAngle) * 35;
+      const arrowTipY = centerY + Math.sin(hubAngle) * 35;
 
-        const hubDx = hubCenterX - player.x;
-        const hubDy = hubCenterY - player.y;
-        const hubAngle = Math.atan2(hubDy, hubDx);
+      ctx.beginPath();
+      ctx.moveTo(arrowStartX, arrowStartY);
+      ctx.lineTo(arrowTipX, arrowTipY);
+      ctx.stroke();
 
-        // Draw central hub arrow
-        ctx.fillStyle = "#FFA500";
-        ctx.strokeStyle = "#FFA500";
-        ctx.lineWidth = 2;
-
-        const arrowStartX = centerX + Math.cos(hubAngle) * 22;
-        const arrowStartY = centerY + Math.sin(hubAngle) * 22;
-        const arrowTipX = centerX + Math.cos(hubAngle) * 35;
-        const arrowTipY = centerY + Math.sin(hubAngle) * 35;
-
-        ctx.beginPath();
-        ctx.moveTo(arrowStartX, arrowStartY);
-        ctx.lineTo(arrowTipX, arrowTipY);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(arrowTipX, arrowTipY);
-        ctx.lineTo(
-          arrowTipX - Math.cos(hubAngle - 0.4) * 6,
-          arrowTipY - Math.sin(hubAngle - 0.4) * 6
-        );
-        ctx.moveTo(arrowTipX, arrowTipY);
-        ctx.lineTo(
-          arrowTipX - Math.cos(hubAngle + 0.4) * 6,
-          arrowTipY - Math.sin(hubAngle + 0.4) * 6
-        );
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.moveTo(arrowTipX, arrowTipY);
+      ctx.lineTo(
+        arrowTipX - Math.cos(hubAngle - 0.4) * 6,
+        arrowTipY - Math.sin(hubAngle - 0.4) * 6
+      );
+      ctx.moveTo(arrowTipX, arrowTipY);
+      ctx.lineTo(
+        arrowTipX - Math.cos(hubAngle + 0.4) * 6,
+        arrowTipY - Math.sin(hubAngle + 0.4) * 6
+      );
+      ctx.stroke();
     }
   }
 
@@ -835,6 +860,61 @@ function startGame() {
     }
   }
 
+  function checkCentralHubExchange() {
+    if (!centralHub) return;
+
+    const hubCenterX = centralHub.x + 137.5;
+    const hubCenterY = centralHub.y + 137.5;
+    const redCircleRadius = 40;
+
+    const playerCenterX = player.x;
+    const playerCenterY = player.y;
+    const distanceToHub = Math.sqrt(
+      Math.pow(playerCenterX - hubCenterX, 2) +
+        Math.pow(playerCenterY - hubCenterY, 2)
+    );
+
+    if (distanceToHub <= redCircleRadius) {
+      if (player.keys >= keysRequired) {
+        player.keys -= keysRequired;
+        player.shards++;
+        keysRequired = Math.floor(Math.random() * 5) + 1;
+      }
+    }
+  }
+
+  function checkBaseStationDelivery() {
+    if (!baseStation) return;
+
+    const baseCenterX = baseStation.x + 137.5;
+    const baseCenterY = baseStation.y + 137.5;
+    const blueCircleRadius = 60;
+
+    const playerCenterX = player.x;
+    const playerCenterY = player.y;
+    const distanceToBase = Math.sqrt(
+      Math.pow(playerCenterX - baseCenterX, 2) +
+        Math.pow(playerCenterY - baseCenterY, 2)
+    );
+
+    if (distanceToBase <= blueCircleRadius) {
+      if (player.shards > 0) {
+        systemHealth = Math.min(100, systemHealth + player.shards * 10);
+        player.shards = 0;
+      }
+    }
+  }
+
+  function updateSystemHealth() {
+    const currentTime = Date.now();
+    const timeDiff = currentTime - healthTime;
+
+    if (timeDiff >= 1000) {
+      systemHealth = Math.max(0, systemHealth - 1);
+      healthTime = currentTime;
+    }
+  }
+
   function drawPostProcessing() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -863,6 +943,7 @@ function startGame() {
     player.takingDamage = false;
     sentryTime += 0.016;
 
+    updateSystemHealth();
     generateKeys();
     drawGrid();
     drawKeys();
@@ -871,6 +952,8 @@ function startGame() {
     movePlayer();
     updateBullets();
     checkKeyCollection();
+    checkCentralHubExchange();
+    checkBaseStationDelivery();
     drawPostProcessing();
     requestAnimationFrame(gameLoop);
   }
