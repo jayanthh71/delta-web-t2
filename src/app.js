@@ -45,7 +45,7 @@ function startGame() {
 
   let exchangeDebounce = false;
 
-  let systemHealth = 100;
+  let systemHealth = 60;
   let shardsDelivered = 0;
   let baseStation = null;
   let centralHub = null;
@@ -321,6 +321,37 @@ function startGame() {
           ctx.beginPath();
           ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
           ctx.stroke();
+
+          if (player.shards > 0) {
+            ctx.shadowColor = "#000000";
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 24px Bruno Ace SC";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`+${player.shards.toString() * 10}`, centerX, centerY);
+
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = "#FFFFFF";
+            ctx.lineWidth = 1;
+            ctx.strokeText(
+              `+${player.shards.toString() * 10}`,
+              centerX,
+              centerY
+            );
+
+            ctx.shadowColor = "#00FFFF";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillText(`+${player.shards.toString() * 10}`, centerX, centerY);
+
+            ctx.shadowBlur = 0;
+          }
         }
 
         // Draw red circle
@@ -351,11 +382,30 @@ function startGame() {
           ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.fillStyle = "#FFFFFF";
+          ctx.shadowColor = "#000000";
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+
+          ctx.fillStyle = "#000000";
           ctx.font = "bold 24px Bruno Ace SC";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(keysRequired.toString(), centerX, centerY);
+
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.strokeStyle = "#FFFFFF";
+          ctx.lineWidth = 1;
+          ctx.strokeText(keysRequired.toString(), centerX, centerY);
+
+          ctx.shadowColor = "#FF6600";
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillText(keysRequired.toString(), centerX, centerY);
+
+          ctx.shadowBlur = 0;
         }
 
         // Draw sentry
@@ -982,6 +1032,8 @@ function startGame() {
   }
 
   function checkKeyCollection() {
+    if (player.keys >= 12) return;
+
     const playerHitBox = {
       x: player.x - 20,
       y: player.y - 20,
@@ -1002,6 +1054,7 @@ function startGame() {
       if (checkBoxIntersection(playerHitBox, keyHitBox)) {
         key.collected = true;
         player.keys++;
+        if (player.keys >= 12) break;
       }
     }
   }
@@ -1091,8 +1144,9 @@ function startGame() {
 
   function drawHUD() {
     drawSystemHealthBar();
+    drawKeyIndicators();
     drawPlayerHealthBar();
-    drawKeysAndShardsDisplay();
+    drawShardsDisplay();
   }
 
   function drawSystemHealthBar() {
@@ -1114,6 +1168,11 @@ function startGame() {
       { x: centerX - halfWidth, y: centerY + 4 },
     ];
 
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
     ctx.fillStyle = "#1a1a1a";
     ctx.strokeStyle = "#00FFFF";
     ctx.lineWidth = 2;
@@ -1126,6 +1185,8 @@ function startGame() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    ctx.shadowBlur = 0;
 
     const healthPercent = systemHealth / 100;
     if (healthPercent > 0) {
@@ -1158,15 +1219,83 @@ function startGame() {
       ctx.restore();
     }
 
-    ctx.fillStyle = "#000000  ";
+    ctx.shadowColor = "#000000";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillStyle = "#000000";
     ctx.font = "bold 24px Bruno Ace SC";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("SYSTEM", centerX, centerY);
+    ctx.fillText("AUREX", centerX, centerY);
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.strokeText("AUREX", centerX, centerY);
+
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#000000";
+    ctx.fillText("AUREX", centerX, centerY);
+
+    ctx.shadowBlur = 0;
+  }
+
+  function drawKeyIndicators() {
+    const centerX = canvas.width / 2;
+    const centerY = 130;
+    const startX = centerX - 275 / 2;
+
+    for (let i = 0; i < 12; i++) {
+      const holeX = startX + i * 25;
+      const holeY = centerY;
+
+      if (i < player.keys) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.arc(holeX + 3, holeY + 3, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#8A2BE2";
+        ctx.beginPath();
+        ctx.arc(holeX, holeY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#BA55D3";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(holeX, holeY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.shadowColor = "#00FFFF";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        ctx.fillStyle = "#1a1a1a";
+        ctx.beginPath();
+        ctx.arc(holeX, holeY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#00FFFF";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(holeX, holeY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
   }
 
   function drawPlayerHealthBar() {
-    const centerX = 280;
+    const centerX = canvas.width / 2 - 300;
     const centerY = 75;
     const radius = 50;
     const innerRadius = 45;
@@ -1179,6 +1308,11 @@ function startGame() {
         y: centerY + radius * Math.sin(angle),
       });
     }
+
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
     ctx.fillStyle = "#1a1a1a";
     ctx.strokeStyle = "#00FFFF";
@@ -1193,16 +1327,26 @@ function startGame() {
     ctx.fill();
     ctx.stroke();
 
+    ctx.shadowBlur = 0;
+
     const healthPercent = player.health / 100;
     if (healthPercent > 0) {
+      let healthColor;
       if (player.health > 60) {
+        healthColor = "#00ff00";
         ctx.strokeStyle = "#00ff00";
+        ctx.shadowColor = "#00ff00";
       } else if (player.health > 30) {
+        healthColor = "#ffff00";
         ctx.strokeStyle = "#ffff00";
+        ctx.shadowColor = "#ffff00";
       } else {
+        healthColor = "#ff0000";
         ctx.strokeStyle = "#ff0000";
+        ctx.shadowColor = "#ff0000";
       }
 
+      ctx.shadowBlur = 8;
       ctx.lineWidth = 6;
       ctx.lineCap = "round";
 
@@ -1250,59 +1394,92 @@ function startGame() {
       }
     }
 
-    ctx.fillStyle = "#FFFFFF";
+    ctx.shadowBlur = 0;
+
+    ctx.shadowColor = "#000000";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillStyle = "#000000";
     ctx.font = "bold 24px Bruno Ace SC";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(Math.round(player.health), centerX, centerY);
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1;
+    ctx.strokeText(Math.round(player.health), centerX, centerY);
+
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(Math.round(player.health), centerX, centerY);
+
+    ctx.shadowBlur = 0;
   }
 
-  function drawKeysAndShardsDisplay() {
-    const centerX = canvas.width - 280;
+  function drawShardsDisplay() {
+    const centerX = canvas.width / 2 + 300;
     const centerY = 75;
     const radius = 50;
 
-    ctx.fillStyle = "#1a1a1a";
-    ctx.beginPath();
+    const hexagonVertices = [];
     for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      const angle = (i * Math.PI) / 3 - Math.PI / 2 + Math.PI / 6;
+      hexagonVertices.push({
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      });
     }
-    ctx.closePath();
-    ctx.fill();
 
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.fillStyle = "#1a1a1a";
     ctx.strokeStyle = "#00FFFF";
     ctx.lineWidth = 2;
 
     ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    ctx.moveTo(hexagonVertices[0].x, hexagonVertices[0].y);
+    for (let i = 1; i < 6; i++) {
+      ctx.lineTo(hexagonVertices[i].x, hexagonVertices[i].y);
     }
     ctx.closePath();
+    ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 14px Bruno Ace SC";
+    ctx.shadowBlur = 0;
+
+    ctx.shadowColor = "#000000";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 24px Bruno Ace SC";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`${player.keys}`, centerX, centerY - 10);
-    ctx.fillText(`${player.shards}`, centerX, centerY + 10);
-    ctx.font = "10px Bruno Ace SC";
-    ctx.fillText("KEYS", centerX, centerY - 25);
-    ctx.fillText("SHARDS", centerX, centerY + 25);
+    ctx.fillText(player.shards, centerX, centerY);
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1;
+    ctx.strokeText(player.shards, centerX, centerY);
+
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(player.shards, centerX, centerY);
+
+    ctx.shadowBlur = 0;
   }
 
   function gameLoop() {
