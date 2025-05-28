@@ -43,7 +43,10 @@ function startGame() {
     shards: 0,
   };
 
+  let exchangeDebounce = false;
+
   let systemHealth = 100;
+  let shardsDelivered = 0;
   let baseStation = null;
   let centralHub = null;
   let keysRequired = Math.floor(Math.random() * 5) + 1;
@@ -1017,13 +1020,16 @@ function startGame() {
         Math.pow(playerCenterY - hubCenterY, 2)
     );
 
-    if (distanceToHub <= redCircleRadius) {
+    const isOnHub = distanceToHub <= redCircleRadius;
+
+    if (isOnHub && !exchangeDebounce) {
       if (player.keys >= keysRequired) {
         player.keys -= keysRequired;
         player.shards++;
         keysRequired = Math.floor(Math.random() * 5) + 1;
       }
     }
+    exchangeDebounce = isOnHub;
   }
 
   function checkBaseStationDelivery() {
@@ -1043,6 +1049,7 @@ function startGame() {
     if (distanceToBase <= blueCircleRadius) {
       if (player.shards > 0) {
         systemHealth = Math.min(100, systemHealth + player.shards * 10);
+        shardsDelivered += player.shards;
         player.shards = 0;
       }
     }
@@ -1053,7 +1060,8 @@ function startGame() {
     const timeDiff = currentTime - healthTime;
 
     if (timeDiff >= 1000) {
-      systemHealth = Math.max(0, systemHealth - 1);
+      const decayRate = Math.max(0.1, 1 - shardsDelivered * 0.1);
+      systemHealth = Math.max(0, systemHealth - decayRate);
       healthTime = currentTime;
     }
   }
