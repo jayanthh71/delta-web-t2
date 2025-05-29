@@ -29,7 +29,59 @@
 
       <!-- Game -->
       <div class="game hidden" id="game" style="display: none">
+        <button class="game__pause-button" id="game__pause-button">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            width="15"
+            viewBox="0 0 320 512"
+          >
+            <path
+              fill="#00FFFF"
+              d="M48 64C21.5 64 0 85.5 0 112L0 400c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48L48 64zm192 0c-26.5 0-48 21.5-48 48l0 288c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48l-32 0z"
+            />
+          </svg>
+        </button>
         <canvas class="game__canvas" id="game-canvas"></canvas>
+      </div>
+
+      <!-- Pause Overlay -->
+      <div class="pause" id="pause-overlay">
+        <div class="pause__menu">
+          <h2 class="pause__title">Game Paused</h2>
+          <button class="pause__button" id="resume-button">Resume Game</button>
+          <button class="pause__button" id="restart-button">
+            Restart Game
+          </button>
+          <button class="pause__button danger" id="main-menu-button">
+            Back to Main Menu
+          </button>
+        </div>
+      </div>
+
+      <!-- Game End Overlay -->
+      <div class="game-end" id="game-end-overlay">
+        <div class="game-end__menu">
+          <h2 class="game-end__title" id="game-end-title">Mission Complete</h2>
+          <div class="game-end__message" id="game-end-message">
+            System Restored
+          </div>
+
+          <div class="game-end__score">
+            <span class="game-end__score-label" id="game-end-score-label"
+              >Score</span
+            >
+            <span class="game-end__score-value" id="game-end-score-value"
+              >0</span
+            >
+          </div>
+          <button class="game-end__button" id="play-again-button">
+            Play Again
+          </button>
+          <button class="game-end__button danger" id="return-to-menu-button">
+            Back to Main Menu
+          </button>
+        </div>
       </div>
     </main>
     <script src="src/app.js"></script>

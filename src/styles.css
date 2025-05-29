@@ -4,6 +4,8 @@
   --button: #15ff00;
   --button-hover: #d1ffcd;
   --button-active: #006500;
+  --overlay: #1a1a2e;
+  --red: #dc3545;
 }
 
 * {
@@ -115,4 +117,211 @@ svg {
   top: 0;
   left: 0;
   cursor: crosshair;
+}
+
+.pause {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.pause.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pause__menu {
+  background-color: var(--background);
+  border: 1px solid rgba(21, 255, 0, 0.3);
+  border-radius: 10px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.pause.active .pause__menu {
+  transform: scale(1);
+}
+
+.pause__title {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.pause__button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  background-color: var(--button);
+  color: var(--background);
+  width: 80%;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.pause__button:hover {
+  background-color: var(--button-hover);
+}
+
+.pause__button:active {
+  background-color: var(--button-active);
+}
+
+.pause__button.danger {
+  background-color: var(--red);
+}
+
+.pause__button.danger:hover {
+  background-color: #ff4444;
+}
+
+.pause__button.danger:active {
+  background-color: #aa0000;
+}
+
+.game__pause-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: #1a1a1a;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  box-shadow: 0 0 0 2px #00ffff, 0 0 15px #00ffff, 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.game__pause-button:hover {
+  background-color: #2a2a3a;
+  box-shadow: 0 0 0 2px #00ffff, 0 0 20px #00ffff, 0 6px 12px rgba(0, 0, 0, 0.4);
+  transform: scale(1.05);
+}
+
+.game-end {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.game-end.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.game-end__menu {
+  background-color: var(--background);
+  border: 1px solid rgba(21, 255, 0, 0.3);
+  border-radius: 10px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.game-end.active .game-end__menu {
+  transform: scale(1);
+}
+
+.game-end__title {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.game-end__message {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.game-end__score {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(21, 255, 0, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  width: 80%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.game-end__score-label {
+  font-size: 1.1rem;
+}
+
+.game-end__score-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.game-end__button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  background-color: var(--button);
+  color: var(--background);
+  width: 80%;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.game-end__button:hover {
+  background-color: var(--button-hover);
+}
+
+.game-end__button:active {
+  background-color: var(--button-active);
+}
+
+.game-end__button.danger {
+  background-color: var(--red);
+}
+
+.game-end__button.danger:hover {
+  background-color: #ff4444;
+}
+
+.game-end__button.danger:active {
+  background-color: #aa0000;
 }

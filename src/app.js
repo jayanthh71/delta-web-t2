@@ -1,22 +1,79 @@
 document.addEventListener("DOMContentLoaded", () => {
+  let currentGame = null;
+
+  function updateHighScoreDisplay() {
+    const highScore = localStorage.getItem("cybescapeHighScore") || "0";
+    document.getElementById(
+      "main-menu__highscore"
+    ).textContent = `High Score: ${parseInt(highScore).toLocaleString()}`;
+  }
+
+  updateHighScoreDisplay();
+
+  function showGame() {
+    const mainMenu = document.getElementById("main-menu");
+    const game = document.getElementById("game");
+
+    mainMenu.classList.add("hidden");
+    game.style.display = "";
+    void game.offsetWidth;
+
+    setTimeout(() => {
+      game.classList.remove("hidden");
+      currentGame = startGame();
+    }, 50);
+  }
+
+  function globalTogglePause() {
+    if (currentGame && currentGame.togglePause) {
+      currentGame.togglePause();
+    }
+  }
+
+  function globalResetGame(source) {
+    if (currentGame && currentGame.resetGame) {
+      currentGame = currentGame.resetGame(source);
+    }
+  }
+
+  function globalReturnToMainMenu(source) {
+    if (currentGame && currentGame.returnToMainMenu) {
+      currentGame.returnToMainMenu(source);
+    }
+  }
+
   document
     .getElementById("main-menu__button")
     .addEventListener("click", showGame);
+  document
+    .getElementById("game__pause-button")
+    .addEventListener("click", globalTogglePause);
+  document
+    .getElementById("resume-button")
+    .addEventListener("click", globalTogglePause);
+  document
+    .getElementById("restart-button")
+    .addEventListener("click", () => globalResetGame("pause"));
+  document
+    .getElementById("main-menu-button")
+    .addEventListener("click", () => globalReturnToMainMenu("pause"));
+  document
+    .getElementById("play-again-button")
+    .addEventListener("click", () => globalResetGame("game-end"));
+  document
+    .getElementById("return-to-menu-button")
+    .addEventListener("click", () => globalReturnToMainMenu("game-end"));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (
+        !document.getElementById("game").classList.contains("hidden") &&
+        document.getElementById("game").style.display !== "none"
+      ) {
+        globalTogglePause();
+      }
+    }
+  });
 });
-
-function showGame() {
-  const mainMenu = document.getElementById("main-menu");
-  const game = document.getElementById("game");
-
-  mainMenu.classList.add("hidden");
-  game.style.display = "";
-  void game.offsetWidth;
-
-  setTimeout(() => {
-    game.classList.remove("hidden");
-    startGame();
-  }, 50);
-}
 
 function startGame() {
   const canvas = document.getElementById("game-canvas");
@@ -25,9 +82,17 @@ function startGame() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
+  let gameState = {
+    paused: false,
+    animationFrameId: null,
+  };
+
   let sentryTime = 0;
   let bulletTime = 0;
   let healthTime = Date.now();
+  let pausedTime = 0;
+  let gameStartTime = Date.now();
+  let totalPausedTime = 0;
   const timeSeed = Math.floor(Date.now().toString().slice(-7));
   const bullets = [];
   const keys = [];
@@ -43,6 +108,7 @@ function startGame() {
     shards: 0,
   };
 
+  let totalKeysCollected = 0;
   let exchangeDebounce = false;
 
   let systemHealth = 60;
@@ -1054,6 +1120,7 @@ function startGame() {
       if (checkBoxIntersection(playerHitBox, keyHitBox)) {
         key.collected = true;
         player.keys++;
+        totalKeysCollected++;
         if (player.keys >= 12) break;
       }
     }
@@ -1482,7 +1549,80 @@ function startGame() {
     ctx.shadowBlur = 0;
   }
 
+  function togglePause() {
+    const pauseOverlay = document.getElementById("pause-overlay");
+    const isPaused = pauseOverlay.classList.contains("active");
+
+    if (isPaused) {
+      pauseOverlay.classList.remove("active");
+      gameState.paused = false;
+
+      const pauseDuration = Date.now() - pausedTime;
+      totalPausedTime += pauseDuration;
+      healthTime += pauseDuration;
+      bulletTime += pauseDuration;
+
+      gameLoop();
+    } else {
+      pauseOverlay.classList.add("active");
+      gameState.paused = true;
+      pausedTime = Date.now();
+
+      if (gameState.animationFrameId) {
+        cancelAnimationFrame(gameState.animationFrameId);
+        gameState.animationFrameId = null;
+      }
+    }
+  }
+
+  function resetGame(source) {
+    if (source === "pause") {
+      document.getElementById("pause-overlay").classList.remove("active");
+    } else if (source === "game-end") {
+      document.getElementById("game-end-overlay").classList.remove("active");
+    }
+
+    gameState.paused = false;
+    if (gameState.animationFrameId) {
+      cancelAnimationFrame(gameState.animationFrameId);
+      gameState.animationFrameId = null;
+    }
+
+    return startGame();
+  }
+
+  function returnToMainMenu(source) {
+    if (source === "pause") {
+      document.getElementById("pause-overlay").classList.remove("active");
+    } else if (source === "game-end") {
+      document.getElementById("game-end-overlay").classList.remove("active");
+    }
+
+    gameState.paused = true;
+    if (gameState.animationFrameId) {
+      cancelAnimationFrame(gameState.animationFrameId);
+      gameState.animationFrameId = null;
+    }
+
+    const game = document.getElementById("game");
+    const mainMenu = document.getElementById("main-menu");
+
+    game.classList.add("hidden");
+    setTimeout(() => {
+      game.style.display = "none";
+      mainMenu.classList.remove("hidden");
+      const highScore = localStorage.getItem("cybescapeHighScore") || "0";
+      document.getElementById(
+        "main-menu__highscore"
+      ).textContent = `High Score: ${parseInt(highScore).toLocaleString()}`;
+    }, 300);
+  }
+
   function gameLoop() {
+    if (gameState.paused) {
+      return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.takingDamage = false;
     sentryTime += 0.016;
@@ -1500,8 +1640,110 @@ function startGame() {
     checkBaseStationDelivery();
     drawPostProcessing();
     drawHUD();
-    requestAnimationFrame(gameLoop);
+
+    if (systemHealth >= 100) {
+      endGame("win");
+      return;
+    } else if (systemHealth <= 0 || player.health <= 0) {
+      endGame("lose");
+      return;
+    }
+
+    gameState.animationFrameId = requestAnimationFrame(gameLoop);
+  }
+
+  function calculateScore(
+    completionTimeMs,
+    keysCollected,
+    shardsUsed,
+    isVictory
+  ) {
+    if (!isVictory) return 0;
+
+    const completionTimeSeconds = completionTimeMs / 1000;
+    const baseScore = 5000;
+
+    const timeBonus = Math.max(
+      0,
+      Math.round(5000 * (300 / (completionTimeSeconds + 60)))
+    );
+    const keyBonus = keysCollected * 100;
+    const efficiencyBonus = Math.max(
+      0,
+      Math.round(3000 / (1 + shardsUsed * 0.3))
+    );
+
+    const totalScore = baseScore + timeBonus + keyBonus + efficiencyBonus;
+    return Math.round(totalScore);
+  }
+
+  function updateHighScore(score) {
+    const currentHighScore = parseInt(
+      localStorage.getItem("cybescapeHighScore") || "0"
+    );
+    if (score > currentHighScore) {
+      localStorage.setItem("cybescapeHighScore", score.toString());
+      return true;
+    }
+    return false;
+  }
+
+  function endGame(result) {
+    gameState.paused = true;
+    if (gameState.animationFrameId) {
+      cancelAnimationFrame(gameState.animationFrameId);
+      gameState.animationFrameId = null;
+    }
+
+    const completionTime = Date.now() - gameStartTime - totalPausedTime;
+    const score = calculateScore(
+      completionTime,
+      totalKeysCollected,
+      shardsDelivered,
+      result === "win"
+    );
+    const isNewHighScore = updateHighScore(score);
+    const gameEndOverlay = document.getElementById("game-end-overlay");
+    const gameEndTitle = document.getElementById("game-end-title");
+    const gameEndMessage = document.getElementById("game-end-message");
+    const gameEndScoreLabel = document.getElementById("game-end-score-label");
+    const gameEndScoreValue = document.getElementById("game-end-score-value");
+
+    if (result === "win") {
+      gameEndTitle.textContent = "Mission Complete";
+      gameEndTitle.style.color = "#00ff00";
+      gameEndMessage.textContent = "System Restored";
+      gameEndMessage.style.color = "#00ff00";
+    } else {
+      gameEndTitle.textContent = "Mission Failed";
+      gameEndTitle.style.color = "#ff0000";
+
+      if (player.health <= 0) {
+        gameEndMessage.textContent = "Player Eliminated";
+      } else {
+        gameEndMessage.textContent = "System Failed";
+      }
+      gameEndMessage.style.color = "#ff0000";
+    }
+
+    if (isNewHighScore) {
+      gameEndScoreLabel.textContent = "NEW HIGH SCORE!";
+      gameEndScoreLabel.style.color = "#FFD700";
+    } else {
+      gameEndScoreLabel.textContent = "Score";
+      gameEndScoreLabel.style.color = "#00ff00";
+    }
+
+    gameEndScoreValue.textContent = score.toLocaleString();
+
+    gameEndOverlay.classList.add("active");
   }
 
   gameLoop();
+
+  return {
+    togglePause,
+    resetGame,
+    returnToMainMenu,
+  };
 }
