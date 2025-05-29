@@ -96,6 +96,7 @@ function startGame() {
   const timeSeed = Math.floor(Date.now().toString().slice(-7));
   const bullets = [];
   const keys = [];
+  const healthKits = [];
   const buildings = [];
   const damagedBuildings = new Map();
 
@@ -249,7 +250,7 @@ function startGame() {
         }
 
         const cellSeed =
-          ((Math.abs(cellX) * 13) % 10000) +
+          ((cellX * 13) % 10000) +
           ((Math.abs(cellY) * 17) % 10000) +
           (timeSeed % 10000); // Generate random seed for each cell
 
@@ -1016,7 +1017,7 @@ function startGame() {
         const cellY = Math.floor(player.y / 275) * 275 + j * 275;
 
         const cellSeed =
-          ((Math.abs(cellX) * 13) % 10000) +
+          ((cellX * 13) % 10000) +
           ((Math.abs(cellY) * 17) % 10000) +
           (timeSeed % 10000);
 
@@ -1039,6 +1040,49 @@ function startGame() {
               id: keyId,
               x: keyX,
               y: keyY,
+              collected: false,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  function generateHealthKits() {
+    const halfGridsX = Math.ceil(canvas.width / 275 / 2) + 3;
+    const halfGridsY = Math.ceil(canvas.height / 275 / 2) + 3;
+
+    for (let i = -halfGridsX; i <= halfGridsX; i++) {
+      for (let j = -halfGridsY; j <= halfGridsY; j++) {
+        const cellX = Math.floor(player.x / 275) * 275 + i * 275;
+        const cellY = Math.floor(player.y / 275) * 275 + j * 275;
+
+        const cellSeed =
+          ((cellX * 13) % 10000) +
+          ((Math.abs(cellY) * 17) % 10000) +
+          (timeSeed % 10000);
+
+        const getSeededRandom = (seed, index) => {
+          const val = Math.sin(seed * 1000 + index * 100) * 10000;
+          return (val - Math.floor(val)) / 1;
+        };
+
+        // Check if this cell should have a health kit
+        if (getSeededRandom(cellSeed, 1998) < 0.05) {
+          const healthKitX = cellX + 50 + getSeededRandom(cellSeed, 1999) * 175;
+          const healthKitY = cellY + 50 + getSeededRandom(cellSeed, 2000) * 175;
+
+          const healthKitId = `${cellX},${cellY}`;
+
+          // Check if this health kit hasn't been collected yet
+          const existingHealthKit = healthKits.find(
+            (kit) => kit.id === healthKitId
+          );
+          if (!existingHealthKit) {
+            healthKits.push({
+              id: healthKitId,
+              x: healthKitX,
+              y: healthKitY,
               collected: false,
             });
           }
@@ -1097,6 +1141,71 @@ function startGame() {
     }
   }
 
+  function drawHealthKits() {
+    const shadowOffsetX = 3;
+    const shadowOffsetY = 3;
+
+    const time = Date.now() * 0.003;
+    const glowIntensity = 0.6 + 0.4 * Math.sin(time);
+
+    for (const healthKit of healthKits) {
+      if (healthKit.collected) continue;
+
+      const screenX = canvas.width / 2 + (healthKit.x - player.x);
+      const screenY = canvas.height / 2 + (healthKit.y - player.y);
+
+      if (
+        screenX >= -20 &&
+        screenX <= canvas.width + 20 &&
+        screenY >= -20 &&
+        screenY <= canvas.height + 20
+      ) {
+        ctx.save();
+        ctx.globalAlpha = 0.4 * glowIntensity;
+        ctx.fillStyle = "#FF0000";
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.arc(
+          screenX + shadowOffsetX,
+          screenY + shadowOffsetY,
+          10,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.fillStyle = "#DC143C";
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#FF6B6B";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(screenX - 5, screenY);
+        ctx.lineTo(screenX + 5, screenY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY - 5);
+        ctx.lineTo(screenX, screenY + 5);
+        ctx.stroke();
+      }
+    }
+  }
+
   function checkKeyCollection() {
     if (player.keys >= 12) return;
 
@@ -1122,6 +1231,34 @@ function startGame() {
         player.keys++;
         totalKeysCollected++;
         if (player.keys >= 12) break;
+      }
+    }
+  }
+
+  function checkHealthKitCollection() {
+    if (player.health >= 100) return;
+
+    const playerHitBox = {
+      x: player.x - 20,
+      y: player.y - 20,
+      width: 40,
+      height: 40,
+    };
+
+    for (const healthKit of healthKits) {
+      if (healthKit.collected) continue;
+
+      const healthKitHitBox = {
+        x: healthKit.x - 10,
+        y: healthKit.y - 10,
+        width: 20,
+        height: 20,
+      };
+
+      if (checkBoxIntersection(playerHitBox, healthKitHitBox)) {
+        healthKit.collected = true;
+        player.health = Math.min(100, player.health + 20);
+        break;
       }
     }
   }
@@ -1629,13 +1766,16 @@ function startGame() {
 
     updateSystemHealth();
     generateKeys();
+    generateHealthKits();
     drawGrid();
     drawKeys();
+    drawHealthKits();
     drawPlayer();
     drawBullets();
     movePlayer();
     updateBullets();
     checkKeyCollection();
+    checkHealthKitCollection();
     checkCentralHubExchange();
     checkBaseStationDelivery();
     drawPostProcessing();
