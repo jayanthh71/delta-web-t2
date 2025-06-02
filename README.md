@@ -17,4 +17,5 @@ Some special features in my iteration of the game is:
 
 ## Preview
 
-![cyberscape](https://github.com/user-attachments/assets/ba25aa0e-2336-472a-8494-d4c893ecd8a2)
+
+![cyberscape](https://github.com/user-attachments/assets/7fd9f0c2-c143-43fb-bdca-bef444e90b87)
