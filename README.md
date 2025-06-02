@@ -14,3 +14,7 @@ Some special features in my iteration of the game is:
 - Dynamic high score system that rewards efficient gameplay
 - Health kit powerups for recovery during combat
 - Immersive UI
+
+## Preview
+
+![cyberscape](https://github.com/user-attachments/assets/ba25aa0e-2336-472a-8494-d4c893ecd8a2)
