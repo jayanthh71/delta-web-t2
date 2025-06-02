@@ -75,7 +75,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+const buildingDestory = new Audio("public/building-destroy.mp3");
+const button = new Audio("public/button.mp3");
+const healthPickup = new Audio("public/health-pickup.mp3");
+const deliverFail = new Audio("public/deliver-fail.mp3");
+const keyPickup = new Audio("public/key-pickup.mp3");
+const deliverSuccess = new Audio("public/deliver-success.mp3");
+const shoot = new Audio("public/shoot.mp3");
+
 function startGame() {
+  button.cloneNode().play();
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
 
@@ -782,6 +791,7 @@ function startGame() {
       dy: Math.sin(angle) * 7.5,
     });
 
+    shoot.cloneNode().play();
     bulletTime = currentTime;
   }
 
@@ -856,6 +866,9 @@ function startGame() {
             bullet.y = reflectionData.newY;
 
             building.health--;
+            if (building.health <= 0) {
+              buildingDestory.cloneNode().play();
+            }
 
             damagedBuildings.set(building.key, {
               health: building.health,
@@ -1230,6 +1243,7 @@ function startGame() {
         key.collected = true;
         player.keys++;
         totalKeysCollected++;
+        keyPickup.cloneNode().play();
         if (player.keys >= 12) break;
       }
     }
@@ -1258,6 +1272,7 @@ function startGame() {
       if (checkBoxIntersection(playerHitBox, healthKitHitBox)) {
         healthKit.collected = true;
         player.health = Math.min(100, player.health + 20);
+        healthPickup.cloneNode().play();
         break;
       }
     }
@@ -1284,6 +1299,9 @@ function startGame() {
         player.keys -= keysRequired;
         player.shards++;
         keysRequired = Math.floor(Math.random() * 5) + 1;
+        deliverSuccess.cloneNode().play();
+      } else {
+        deliverFail.cloneNode().play();
       }
     }
     exchangeDebounce = isOnHub;
@@ -1308,6 +1326,7 @@ function startGame() {
         systemHealth = Math.min(100, systemHealth + player.shards * 10);
         shardsDelivered += player.shards;
         player.shards = 0;
+        deliverSuccess.cloneNode().play();
       }
     }
   }
@@ -1687,6 +1706,7 @@ function startGame() {
   }
 
   function togglePause() {
+    button.cloneNode().play();
     const pauseOverlay = document.getElementById("pause-overlay");
     const isPaused = pauseOverlay.classList.contains("active");
 
@@ -1713,6 +1733,7 @@ function startGame() {
   }
 
   function resetGame(source) {
+    button.cloneNode().play();
     if (source === "pause") {
       document.getElementById("pause-overlay").classList.remove("active");
     } else if (source === "game-end") {
@@ -1729,6 +1750,7 @@ function startGame() {
   }
 
   function returnToMainMenu(source) {
+    button.cloneNode().play();
     if (source === "pause") {
       document.getElementById("pause-overlay").classList.remove("active");
     } else if (source === "game-end") {
